@@ -26,22 +26,33 @@ func main() {
 		burstyLimiter <- time.Now()
 	}
 
+
 	go func() {
-		for t := range time.Tick(200 * time.Millisecond) {
+		for t := range time.Tick(500 * time.Millisecond) {
 			burstyLimiter <- t
 		}
 	}()
 
-	burstyRequests := make(chan int, 5)
-	for i := 1; i <= 5; i++ {
+	burstyRequests := make(chan int, 10)
+	for i := 1; i <= 10; i++ {
 		burstyRequests <- i
 	}
 	close(burstyRequests)
 
 	for req := range burstyRequests {
-		<-burstyLimiter
-		fmt.Println("request", req, time.Now())
+		timeout := make(chan bool, 1)
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			timeout <- true
+		}()
+
+		select {
+		case <-burstyLimiter:
+			fmt.Println("request", req, time.Now())
+		case <-timeout:
+			fmt.Println("timeout for: ", req)
+		}
 	}
 
 
-}
+}I
